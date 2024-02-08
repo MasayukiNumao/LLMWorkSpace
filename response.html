@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIチャットボット</title>
+    <style>
+    
+
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-box" id="chatBox">
+            {% if history %}
+                {% for item in history %}
+                    <div class="user-input">{{ item.query }}</div>
+                    <div class="ai-response">
+                        <img src="/static/ai_logo.png" alt="AI Logo" class="ai-logo">
+                        <span id="responseText{{ loop.index }}">{{ item.response }}</span>
+                    </div>
+                {% endfor %}
+            {% else %}
+                    <div class="ai-response"><img src="/static/ai_logo.png" alt="AI Logo" class="ai-logo">こんにちは。質問をお願いします。</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="footer">
+        <form id="questionForm">
+            <div class="input-container">
+                <input type="text" id="userInput" name="user_input" placeholder="質問を入力してください" required>
+                <button type="submit" class="submit-button"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </form>
+        <form id="stopForm">
+            <input type="submit" class="stop-button" value="停止">
+        </form>
+        <form action="/clear_history" method="post">
+            <input type="submit" class="clear-history-button" value="履歴をクリア" />
+        </form>
+    </div>    
+    
+    <!-- JavaScript -->
+
+<script>
+    function sendQuestionForStreaming() {
+        var userInput = document.getElementById("userInput").value;
+        displayUserInput(userInput);
+        var streamUrl = "http://127.0.0.1:8001/stream?user_input=" + encodeURIComponent(userInput);
+        document.getElementById("userInput").value = "";
+        
+        var eventSource = new EventSource(streamUrl);
+        
+        var responseDiv = createNewChatBox();
+        let isFirstMessage = true;
+        let currentMessage = "";
+        
+        eventSource.onmessage = function(event) {
+            var data = JSON.parse(event.data);
+
+            if (isFirstMessage && data.message === "") {
+                isFirstMessage = false;
+                return;
+            }
+            if (data.message === "") {
+                eventSource.close();
+            } else {
+                currentMessage += data.message;
+                updateChatBox(responseDiv, currentMessage);
+            }
+        };
+        
+        eventSource.onerror = function(error) {
+            console.error("EventSource failed:", error);
+            eventSource.close();  
+        };
+    }
+
+
+    document.getElementById('questionForm').addEventListener('submit', function(event) {
+        event.preventDefault();  
+        sendQuestionForStreaming();
+    });
+    
+    document.getElementById('stopForm').addEventListener('submit', function(event) {
+        event.preventDefault();  
+        if (eventSource) {
+            eventSource.close(); 
+        }
+    });
+    
+    </script>
+</body>
+</html>

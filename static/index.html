@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const output = document.getElementById("output");
+        const input = document.getElementById("input");
+        const button = document.getElementById("send_button");
+
+        let socket;
+
+        // Send message to WebSocket server
+        button.addEventListener("click", () => {
+          if (!socket || socket.readyState !== WebSocket.OPEN) {
+            socket = new WebSocket("ws://localhost:8001/ws");
+
+            socket.addEventListener("open", (event) => {
+              output.innerHTML += "<p>Connected to WebSocket server.</p>";
+              button.textContent = "Send";
+            });
+
+            socket.addEventListener("message", (event) => {
+              output.innerHTML += event.data;
+            });
+
+            socket.addEventListener("close", (event) => {
+              output.innerHTML += "<p>Disconnected from WebSocket server.</p>";
+              button.textContent = "Connect";
+            });
+          } else {
+            const message = input.value;
+            if (message) {
+              socket.send(message);
+              input.value = "";
+            }
+          }
+        });
+
+        // Close WebSocket connection on window close
+        window.addEventListener("beforeunload", () => {
+          socket.close();
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <h1>Simple Chatbot</h1>
+    <input
+      id="input"
+      type="text"
+      placeholder="Enter message"
+      style="width: 500px; height: 100px"
+    />
+    <button id="send_button">Connect</button>
+    <div id="output"></div>
+  </body>
+</html>
+
